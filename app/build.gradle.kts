@@ -7,6 +7,15 @@ plugins {
     application
 }
 
+dependencies {
+    // LibGDX core library
+    implementation("com.badlogicgames.gdx:gdx:1.13.1")
+    // Desktop (LWJGL3) backend for LibGDX
+    implementation("com.badlogicgames.gdx:gdx-backend-lwjgl3:1.13.1")
+    // Native platform bindings for desktop
+    implementation("com.badlogicgames.gdx:gdx-platform:1.13.1:natives-desktop")
+}
+
 application {
     // Define the Fully Qualified Name for the application main class
     // (Note that Kotlin compiles `App.kt` to a class with FQN `com.example.app.AppKt`.)
