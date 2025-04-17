@@ -23,9 +23,9 @@ class MainMenu(private val game: PongGame) : Screen {
     // UI components
     private val camera: OrthographicCamera = OrthographicCamera()
     private val batch: SpriteBatch = SpriteBatch()
-    private lateinit var font: BitmapFont
-    private lateinit var titleFont: BitmapFont
-    private lateinit var instructionFont: BitmapFont
+    private var font: BitmapFont
+    private var titleFont: BitmapFont
+    private var instructionFont: BitmapFont
     private val glyphLayout = GlyphLayout()
 
     // Menu options
@@ -40,7 +40,7 @@ class MainMenu(private val game: PongGame) : Screen {
     private val touchPoint = Vector3()
 
     init {
-        // Set up camera to match our screen dimensions
+        // Set up the camera to match our screen dimensions
         camera.setToOrtho(false, screenWidth, screenHeight)
         
         // Configure fonts using FreeType for high-quality rendering
@@ -61,7 +61,7 @@ class MainMenu(private val game: PongGame) : Screen {
         parameter.color = Color.LIGHT_GRAY
         instructionFont = generator.generateFont(parameter)
         
-        // Dispose the generator after creating fonts
+        // Dispose of the generator after creating fonts
         generator.dispose()
     }
 
@@ -107,7 +107,7 @@ class MainMenu(private val game: PongGame) : Screen {
             font.draw(batch, menuItems[i], x, y)
         }
         
-        // Draw instructions with dedicated instruction font
+        // Draw instructions with a dedicated instruction font
         glyphLayout.setText(instructionFont, "Use UP/DOWN arrows to navigate, ENTER to select")
         instructionFont.draw(batch, "Use UP/DOWN arrows to navigate, ENTER to select",
             (screenWidth - glyphLayout.width) / 2,
@@ -133,7 +133,7 @@ class MainMenu(private val game: PongGame) : Screen {
     }
 
     override fun dispose() {
-        // Clean up resources (batch, fonts)
+        // Cleanup resources (batch, fonts)
         batch.dispose()
         font.dispose()
         titleFont.dispose()
@@ -152,7 +152,7 @@ class MainMenu(private val game: PongGame) : Screen {
             selectedItem = (selectedItem + 1) % menuItems.size
         }
         
-        // Handle selection with Enter key
+        // Handle selection with an Enter key
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             selectMenuItem(selectedItem)
         }
