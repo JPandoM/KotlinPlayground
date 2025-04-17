@@ -28,6 +28,27 @@ The shared build logic was extracted to a convention plugin located in `buildSrc
 This project uses a version catalog (see `gradle/libs.versions.toml`) to declare and version dependencies
 and both a build cache and a configuration cache (see `gradle.properties`).
 
+## Development Status
+
+### Main Menu Implementation
+
+The `MainMenu` class is currently a skeleton with defined variables and commented method stubs:
+
+* Variable declarations for screen dimensions, UI components, menu options, and positioning are in place
+* Method implementations need to be filled in according to the comments:
+  * `init()` - Needs camera and font initialization
+  * `render()` - Needs screen clearing, camera update, input handling, and menu drawing
+  * `handleInput()` - Needs keyboard and touch input implementation
+  * `selectMenuItem()` - Needs menu item selection logic for Play Game, Settings, and Exit
+  * Other Screen interface methods require implementation as needed
+
+### Menu Structure
+
+The menu has three options:
+* Play Game - Will start the game (implementation needed)
+* Settings - Will open settings screen (implementation needed)
+* Exit - Will exit the application
+
 ## LibGDX Integration
 
 The app module integrates LibGDX 1.13.1, which provides:
