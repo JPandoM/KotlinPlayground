@@ -1,6 +1,6 @@
 # KotlinPlayground with LibGDX
 
-This project uses [Gradle](https://gradle.org/) and integrates [LibGDX](https://libgdx.com/) - a cross-platform game development framework.
+This project uses [Gradle](https://gradle.org/) and integrates [LibGDX](https://libgdx.com/) - a cross-platform game development framework. It implements a simple bouncing ball game with a main menu navigation system.
 
 ## Build and Run
 
@@ -21,7 +21,13 @@ This is the suggested way to use Gradle in production projects.
 
 ## Project Structure
 
-This project consists of the `app` module with game code and the shared build logic in `buildSrc`.
+This project consists of the following main components:
+
+- `App.kt` - Application entry point
+- `PongGame.kt` - Main game class that manages screens
+- `MainMenu.kt` - Menu screen implementation
+- `Ball.kt` - Bouncing ball implementation with physics
+- `app` module with game code and the shared build logic in `buildSrc`
 
 The shared build logic was extracted to a convention plugin located in `buildSrc`.
 
@@ -29,6 +35,24 @@ This project uses a version catalog (see `gradle/libs.versions.toml`) to declare
 and both a build cache and a configuration cache (see `gradle.properties`).
 
 ## Development Status
+
+### Game Core Implementation
+
+The `PongGame` class serves as the main game controller:
+* Extends LibGDX's `Game` class to manage screens
+* Creates and sets the main menu as the initial screen
+* Handles proper resource disposal
+
+### Ball Physics Implementation
+
+The `Ball` class implements a bouncing ball with:
+
+* Position and velocity tracking with delta time-based movement
+* Border collision detection with position correction
+* Dynamic color changes on collision with borders
+* Random color selection from a predefined palette
+* Proper rendering using LibGDX's ShapeRenderer
+* Configurable size and initial position
 
 ### Main Menu Implementation
 
@@ -85,7 +109,7 @@ The menu supports both keyboard and mouse/touch controls:
 ### Menu Structure
 
 The menu has three options:
-* **Play Game** - Will start the game (implementation pending)
+* **Play Game** - Will start the game (implementation in progress)
 * **Settings** - Will open settings screen (implementation pending)
 * **Exit** - Exits the application immediately
 

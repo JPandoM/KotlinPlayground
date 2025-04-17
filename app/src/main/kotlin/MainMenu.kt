@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 
 /**
  * Main menu screen for the Pong game
@@ -38,6 +39,12 @@ class MainMenu(private val game: PongGame) : Screen {
 
     // Touch/mouse position
     private val touchPoint = Vector3()
+    
+    // Shape renderer for drawing the ball
+    private val shapeRenderer = ShapeRenderer()
+    
+    // Bouncing ball
+    private val ball = Ball(screenWidth, screenHeight)
 
     init {
         // Set up the camera to match our screen dimensions
@@ -70,12 +77,17 @@ class MainMenu(private val game: PongGame) : Screen {
 
     override fun render(delta: Float) {
         // Clear the screen with a dark blue color
-        Gdx.gl.glClearColor(0f, 0f, 0.2f, 1f)
+        Gdx.gl.glClearColor(0f, 0f, 0f, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
         
         // Update camera
         camera.update()
         batch.projectionMatrix = camera.combined
+        shapeRenderer.projectionMatrix = camera.combined
+        
+        // Update and render the bouncing ball (before drawing menu)
+        ball.update(delta)
+        ball.render(shapeRenderer)
         
         // Handle input
         handleInput()
@@ -133,11 +145,12 @@ class MainMenu(private val game: PongGame) : Screen {
     }
 
     override fun dispose() {
-        // Cleanup resources (batch, fonts)
+        // Cleanup resources (batch, fonts, shapeRenderer)
         batch.dispose()
         font.dispose()
         titleFont.dispose()
         instructionFont.dispose()
+        shapeRenderer.dispose()
     }
 
     private fun handleInput() {

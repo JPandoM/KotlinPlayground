@@ -8,6 +8,7 @@ fun main() {
         setWindowedMode(800, 600)
         setForegroundFPS(60)
         useVsync(true)
+        setResizable(false)
     }
 
     Lwjgl3Application(PongGame(), config)
