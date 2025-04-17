@@ -32,31 +32,80 @@ and both a build cache and a configuration cache (see `gradle.properties`).
 
 ### Main Menu Implementation
 
-The `MainMenu` class is currently a skeleton with defined variables and commented method stubs:
+The `MainMenu` class is fully implemented with:
 
-* Variable declarations for screen dimensions, UI components, menu options, and positioning are in place
-* Method implementations need to be filled in according to the comments:
-  * `init()` - Needs camera and font initialization
-  * `render()` - Needs screen clearing, camera update, input handling, and menu drawing
-  * `handleInput()` - Needs keyboard and touch input implementation
-  * `selectMenuItem()` - Needs menu item selection logic for Play Game, Settings, and Exit
-  * Other Screen interface methods require implementation as needed
+* Three menu options (Play Game, Settings, Exit) with selected item highlighting
+* Keyboard (arrow keys) and mouse/touch input handling
+* Centered text rendering with proper alignment
+* Separate font sizes and styles for different UI elements
+* Proper resource management with disposal when the screen is closed
+* Smooth color changes for selected menu items
+* Centralized layout with computed positioning based on screen dimensions
+
+### Font Rendering with FreeType
+
+The menu implements high-quality text rendering using LibGDX's FreeType extension:
+
+* **Multiple Font Instances**: Instead of scaling a single font (which causes blurriness), separate font instances are created:
+  * Title font: 45px for the game title
+  * Menu font: 30px for menu items
+  * Instruction font: 15px for the footer instructions
+  
+* **Font Generation Process**:
+  * FreeTypeFontGenerator loads the TTF file from resources
+  * FreeTypeFontParameter configures size, color, and other properties
+  * Each font is generated at its natural size for maximum clarity
+  * The generator is disposed after all fonts are created
+
+* **Font Asset Location**:
+  * TTF font file is stored in the `app/src/main/resources/fonts/` directory
+  * The Roboto font is used for all text elements
+
+* **Resource Management**:
+  * All fonts are properly disposed in the `dispose()` method
+  * The font generator is disposed immediately after use
+
+### Menu Navigation
+
+The menu supports both keyboard and mouse/touch controls:
+
+* **Keyboard Navigation**:
+  * UP/DOWN arrow keys move the selection indicator
+  * ENTER key confirms the selection
+  * Selection wraps around from top to bottom and vice versa
+  
+* **Mouse/Touch Navigation**:
+  * Click/tap directly on menu items to select them
+  * Hitboxes are calculated based on the text dimensions for accurate selection
+
+* **Visual Feedback**:
+  * Selected menu item turns yellow while others remain white
+  * Text remains centered regardless of length
 
 ### Menu Structure
 
 The menu has three options:
-* Play Game - Will start the game (implementation needed)
-* Settings - Will open settings screen (implementation needed)
-* Exit - Will exit the application
+* **Play Game** - Will start the game (implementation pending)
+* **Settings** - Will open settings screen (implementation pending)
+* **Exit** - Exits the application immediately
 
 ## LibGDX Integration
 
-The app module integrates LibGDX 1.13.1, which provides:
+The app module integrates LibGDX 1.13.1 with the following components:
 
-* Cross-platform game development capabilities
-* Hardware-accelerated graphics rendering
-* Audio and input handling
-* Physics and collision detection
+* **Core LibGDX** - Cross-platform game development framework
+* **LWJGL3 Backend** - Desktop rendering backend
+* **FreeType Extension** - High-quality font rendering
+* **Platform Bindings** - Native libraries for desktop platforms
+
+### Dependencies
+
+The project includes the following LibGDX dependencies:
+* `gdx:1.13.1` - Core LibGDX library
+* `gdx-backend-lwjgl3:1.13.1` - Desktop backend
+* `gdx-platform:1.13.1:natives-desktop` - Platform bindings
+* `gdx-freetype:1.13.1` - FreeType font extension
+* `gdx-freetype-platform:1.13.1:natives-desktop` - FreeType native libraries
 
 ### LibGDX Resources
 

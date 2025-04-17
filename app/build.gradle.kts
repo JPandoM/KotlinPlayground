@@ -14,6 +14,9 @@ dependencies {
     implementation("com.badlogicgames.gdx:gdx-backend-lwjgl3:1.13.1")
     // Native platform bindings for desktop
     implementation("com.badlogicgames.gdx:gdx-platform:1.13.1:natives-desktop")
+    // FreeType extension for high-quality fonts
+    implementation("com.badlogicgames.gdx:gdx-freetype:1.13.1")
+    implementation("com.badlogicgames.gdx:gdx-freetype-platform:1.13.1:natives-desktop")
 }
 
 application {
