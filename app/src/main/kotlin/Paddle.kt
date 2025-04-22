@@ -129,7 +129,7 @@ class Paddle(
     }
     
     /**
-     * Updates the collision rectangle to match current position
+     * Updates the collision rectangle to match the current position
      */
     private fun updateCollisionBounds() {
         bounds.y = posY

@@ -23,7 +23,7 @@ class MainMenu(private val game: PongGame) : Screen {
     companion object {
         private const val SCREEN_WIDTH = 800f
         private const val SCREEN_HEIGHT = 600f
-        private const val MENU_START_Y = 300f
+        private const val MENU_START_Y = 290f
         private const val MENU_ITEM_SPACING = 50f
         private const val TITLE_FONT_SIZE = 60
         private const val MENU_FONT_SIZE = 30
@@ -38,15 +38,20 @@ class MainMenu(private val game: PongGame) : Screen {
         private const val TITLE_FREQUENCY = 2f * Math.PI.toFloat() / 3.0f
         private const val MENU_AMPLITUDE = 8f
         private const val MENU_FREQUENCY = 2f * Math.PI.toFloat() / 3.0f
+        
+        // Menu item selection constants
+        private const val PLAY_OPTION = 0
+        private const val SETTINGS_OPTION = 1
+        private const val EXIT_OPTION = 2
     }
 
     // UI components
     private val camera = OrthographicCamera()
     private val batch = SpriteBatch()
     private val glyphLayout = GlyphLayout()
-    private val ball = Ball(SCREEN_WIDTH, SCREEN_HEIGHT)
+    private val ball = Ball(SCREEN_WIDTH, SCREEN_HEIGHT, ballColor = Color.WHITE)
     private val shapeRenderer = ShapeRenderer()
-    
+
     // Fonts
     private lateinit var font: BitmapFont
     private lateinit var titleFont: BitmapFont
@@ -58,37 +63,39 @@ class MainMenu(private val game: PongGame) : Screen {
 
     // Touch/mouse position
     private val touchPoint = Vector3()
-    
+
     // Background music
     private lateinit var menuMusic: com.badlogic.gdx.audio.Music
-    
+
     // Animation timing
     private var totalTime: Float = 0f
-    
+
     // Particle system for letter effects
     private val particleSystem = ParticleSystem(emissionRate = PARTICLE_EMISSION_RATE)
     private val random = Random.Default
 
-    // Font dimensions for positioning
-    private val titleFontHeight = TITLE_FONT_SIZE * 0.75f  // Approximate height of capital letters
-    
     // Title details
+    /**
+     * Array of letters that make up the title "PONG"
+     * Each letter is animated independently and has particle effects
+     */
     private val titleLetters = arrayOf("P", "O", "N", "G")
-    
+
+
     init {
         // Set up the camera to match our screen dimensions
         camera.setToOrtho(false, SCREEN_WIDTH, SCREEN_HEIGHT)
-        
+
         // Initialize fonts
         initializeFonts()
     }
-    
+
     /**
      * Initializes all the fonts used in the menu
      */
     private fun initializeFonts() {
         val generator = FreeTypeFontGenerator(Gdx.files.internal("fonts/roboto.ttf"))
-        
+
         // Title font - large size for the title
         titleFont = generator.generateFont(FreeTypeFontParameter().apply {
             size = TITLE_FONT_SIZE
@@ -101,7 +108,7 @@ class MainMenu(private val game: PongGame) : Screen {
             borderStraight = true
             spaceX = 300 // Add spacing between characters
         })
-        
+
         // Menu font - medium size for menu items
         font = generator.generateFont(FreeTypeFontParameter().apply {
             size = MENU_FONT_SIZE
@@ -121,7 +128,7 @@ class MainMenu(private val game: PongGame) : Screen {
     override fun show() {
         loadAndPlayBackgroundMusic()
     }
-    
+
     /**
      * Loads and starts playing the background music
      */
@@ -131,7 +138,7 @@ class MainMenu(private val game: PongGame) : Screen {
         menuMusic.volume = 0.7f
         menuMusic.play()
     }
-    
+
     override fun render(delta: Float) {
         updateState(delta)
         clearScreen()
@@ -140,7 +147,7 @@ class MainMenu(private val game: PongGame) : Screen {
         handleInput()
         renderMenuUI()
     }
-    
+
     /**
      * Updates animation time and particle system
      */
@@ -148,32 +155,32 @@ class MainMenu(private val game: PongGame) : Screen {
         totalTime += delta
         particleSystem.update(delta)
     }
-    
+
     /**
-     * Clears the screen with black background
+     * Clears the screen with a black background
      */
     private fun clearScreen() {
         Gdx.gl.glClearColor(0f, 0f, 0f, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
     }
-    
+
     /**
-     * Sets up camera and projection matrices
+     * Sets up the camera and projection matrices
      */
     private fun setupRendering() {
         camera.update()
         batch.projectionMatrix = camera.combined
         shapeRenderer.projectionMatrix = camera.combined
     }
-    
+
     /**
-     * Renders ball and particle effects
+     * Renders the ball and particle effects
      */
     private fun renderGameElements(delta: Float) {
         // Update and render the bouncing ball
         ball.update(delta)
         ball.render(shapeRenderer)
-        
+
         // Render particles
         particleSystem.render(shapeRenderer)
     }
@@ -193,11 +200,11 @@ class MainMenu(private val game: PongGame) : Screen {
      * Renders the animated "PONG" title with particles
      */
     private fun renderAnimatedTitle() {
-        // Calculate widths of each letter for proper centering
+        // Calculate the widths of each letter for proper centering
         val letterWidths = calculateLetterWidths()
         val totalTitleWidth = calculateTotalTitleWidth(letterWidths)
         
-        // Calculate starting X position to center the entire title
+        // Calculate the starting X position to center the entire title
         var currentX = (SCREEN_WIDTH - totalTitleWidth) / 2
         
         // Draw each letter with its own animation
@@ -230,7 +237,7 @@ class MainMenu(private val game: PongGame) : Screen {
         // Sum of all letter widths
         val lettersWidth = letterWidths.sum()
         
-        // Add spacing between letters to total width
+        // Add spacing between letters to the total width
         val spacingWidth = LETTER_SPACING * (titleLetters.size - 1)
         return lettersWidth + spacingWidth
     }
@@ -247,33 +254,40 @@ class MainMenu(private val game: PongGame) : Screen {
         // Draw the letter with animation
         titleFont.draw(batch, titleLetters[index], xPosition, TITLE_BASE_Y + letterOffset)
         
-        // Emit particles from the bottom of the letter
-        emitParticlesForLetter(index, xPosition, letterWidth, letterOffset)
+        // Emit particles from the top edge of the letter
+        emitParticlesForLetter(xPosition, letterWidth, letterOffset)
         
         // Return position for the next letter
         return xPosition + letterWidth + LETTER_SPACING
     }
     
     /**
-     * Emits particles from the bottom of a letter
+     * Emits particles from the top of a letter
      */
-    private fun emitParticlesForLetter(index: Int, xPosition: Float, letterWidth: Float, letterOffset: Float) {
+    private fun emitParticlesForLetter(xPosition: Float, letterWidth: Float, letterOffset: Float) {
         if (particleSystem.canEmit()) {
-            // Create a different number of particles based on letter width
-            val particleCount = random.nextInt(3, 6)
+            // Simplified letter detection - just use the index parameter from drawAnimatedLetter
+            val letterIndex = titleLetters.indices.find { i -> 
+                val letterPos = (SCREEN_WIDTH - calculateTotalTitleWidth(calculateLetterWidths())) / 2 +
+                    calculateLetterWidths().take(i).sum() + (i * LETTER_SPACING)
+                xPosition >= letterPos - 5 && xPosition <= letterPos + letterWidth + 5
+            } ?: 0
             
-            // For a capital letter, the baseline is at the bottom,
-            // but we need to position particles at the very bottom of the visual character
-            val letterBottomOffsetY = -titleFontHeight
-            
-            // Emit particles across the bottom of the letter
+            // Set appropriate particle counts for each letter
+            val particleCount = when (letterIndex) {
+                1 -> random.nextInt(1, 2)  // 'O' gets 1 particle
+                2 -> random.nextInt(1, 2)  // 'N' gets 1 particle
+                else -> random.nextInt(3, 6) // Normal amount for P and G
+            }
+
+            // Emit particles across the top of the letter
             repeat(particleCount) {
                 // Randomize position across the letter width (but not at the very edges)
                 val offsetX = letterWidth * (0.1f + random.nextFloat() * 0.8f) // 10-90% of width
                 val emissionX = xPosition + offsetX
                 
-                // Position at the true bottom of the letter
-                val emissionY = TITLE_BASE_Y + letterOffset + letterBottomOffsetY
+                // Position exactly at the top of the letter
+                val emissionY = TITLE_BASE_Y + letterOffset
                 
                 // Emit a single particle at this position
                 particleSystem.emit(emissionX, emissionY, 1)

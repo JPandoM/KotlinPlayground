@@ -14,16 +14,14 @@ class Ball(
     private val screenWidth: Float,
     private val screenHeight: Float,
     initialRadius: Float = 20f,
-    initialColor: Color = Color.WHITE,
+    private val ballColor: Color = Color.WHITE,
     initialVelocityX: Float = 200f,
     initialVelocityY: Float = 200f,
-    private val colorChangeOnBounce: Boolean = true,
     private val horizontalBoundsEnabled: Boolean = true
 ) {
     // Constants
     companion object {
         private const val BOUNCE_VELOCITY_FACTOR = 0.8f
-        private const val MIN_VERTICAL_VELOCITY = 100f
         private const val POSITION_CORRECTION_OFFSET = 1f
         private const val MAX_BOUNCE_ANGLE_DEGREES = 75f
     }
@@ -39,23 +37,12 @@ class Ball(
         private set
     var velocityY = initialVelocityY
         private set
-    var currentColor = initialColor
-        private set
 
     // Collision bounds
     val bounds = Circle(posX, posY, radius)
     
-    // Available colors for the ball to cycle through
-    private val colors = arrayOf(
-        Color.WHITE, Color.RED, Color.GREEN, Color.BLUE, 
-        Color.YELLOW, Color.CYAN, Color.MAGENTA, Color.ORANGE
-    )
-    
-    // Random generator for colors
-    private val random = java.util.Random()
-    
     /**
-     * Updates the ball's position and handles bouncing against screen edges
+     * Updates the ball's position and handles bouncing against the screen edges
      */
     fun update(delta: Float) {
         updatePosition(delta)
@@ -65,7 +52,7 @@ class Ball(
     }
     
     /**
-     * Updates the ball's position based on velocity
+     * Updates the ball's position based on its velocity
      */
     private fun updatePosition(delta: Float) {
         posX += velocityX * delta
@@ -73,7 +60,7 @@ class Ball(
     }
     
     /**
-     * Updates the collision bounds to match current position
+     * Updates the collision bounds to match the current position
      */
     private fun updateBounds() {
         bounds.set(posX, posY, radius)
@@ -98,7 +85,6 @@ class Ball(
     private fun handleLeftBoundCollision() {
         posX = radius // Correct position to prevent sticking
         velocityX = abs(velocityX) // Bounce by reversing velocity
-        if (colorChangeOnBounce) changeColor()
     }
     
     /**
@@ -107,7 +93,6 @@ class Ball(
     private fun handleRightBoundCollision() {
         posX = screenWidth - radius
         velocityX = -abs(velocityX)
-        if (colorChangeOnBounce) changeColor()
     }
     
     /**
@@ -127,7 +112,6 @@ class Ball(
     private fun handleBottomBoundCollision() {
         posY = radius
         velocityY = abs(velocityY)
-        if (colorChangeOnBounce) changeColor()
     }
     
     /**
@@ -136,19 +120,6 @@ class Ball(
     private fun handleTopBoundCollision() {
         posY = screenHeight - radius
         velocityY = -abs(velocityY)
-        if (colorChangeOnBounce) changeColor()
-    }
-    
-    /**
-     * Changes the ball color to a random different color
-     */
-    private fun changeColor() {
-        var newColorIndex: Int
-        do {
-            newColorIndex = random.nextInt(colors.size)
-        } while (colors[newColorIndex] == currentColor)
-        
-        currentColor = colors[newColorIndex]
     }
     
     /**
@@ -156,7 +127,7 @@ class Ball(
      */
     fun render(shapeRenderer: ShapeRenderer) {
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        shapeRenderer.color = currentColor
+        shapeRenderer.color = ballColor
         shapeRenderer.circle(posX, posY, radius)
         shapeRenderer.end()
     }
@@ -182,12 +153,7 @@ class Ball(
      * Gets the X position of the ball
      */
     fun getX(): Float = posX
-    
-    /**
-     * Gets the Y position of the ball
-     */
-    fun getY(): Float = posY
-    
+
     /**
      * Checks if the ball collides with a rectangle (used for paddle collision)
      */
@@ -196,12 +162,12 @@ class Ball(
         val closestX = max(rect.x, min(posX, rect.x + rect.width))
         val closestY = max(rect.y, min(posY, rect.y + rect.height))
         
-        // Calculate squared distance
+        // Calculate the squared distance
         return calculateSquaredDistance(closestX, closestY) < (radius * radius)
     }
     
     /**
-     * Calculates squared distance between the ball center and a point
+     * Calculates the squared distance between the ball center and a point
      */
     private fun calculateSquaredDistance(pointX: Float, pointY: Float): Float {
         val distX = posX - pointX
@@ -213,7 +179,7 @@ class Ball(
      * Handles the ball bouncing off a paddle
      */
     fun bounceOffPaddle(isLeftPaddle: Boolean, paddleBounds: Rectangle) {
-        // Calculate bounce angle based on where the ball hits the paddle
+        // Calculate the bounce angle based on where the ball hits the paddle
         val bounceAngle = calculateBounceAngle(paddleBounds)
         
         // Apply the velocity changes
@@ -222,7 +188,7 @@ class Ball(
         // Position correction to prevent sticking
         correctPositionAfterPaddleCollision(isLeftPaddle, paddleBounds)
         
-        // Update bounds
+        // Update the bounds
         updateBounds()
     }
     
@@ -236,6 +202,9 @@ class Ball(
     
     /**
      * Applies velocity changes after a paddle collision
+     * 
+     * @param isLeftPaddle Whether the ball hit the left paddle (true) or right paddle (false)
+     * @param bounceAngle The angle at which the ball should bounce, determined by impact position
      */
     private fun applyBounceVelocity(isLeftPaddle: Boolean, bounceAngle: Float) {
         // Calculate current speed
@@ -256,8 +225,9 @@ class Ball(
      * Ensures the ball has a minimum vertical velocity for better gameplay
      */
     private fun ensureMinimumVerticalVelocity() {
-        if (abs(velocityY) < MIN_VERTICAL_VELOCITY) {
-            velocityY = if (velocityY < 0) -MIN_VERTICAL_VELOCITY else MIN_VERTICAL_VELOCITY
+        val minVelocity = 100f
+        if (abs(velocityY) < minVelocity) {
+            velocityY = if (velocityY < 0) -minVelocity else minVelocity
         }
     }
     

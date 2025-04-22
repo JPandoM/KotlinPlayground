@@ -9,7 +9,6 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.MathUtils
-import kotlin.math.abs
 
 /**
  * The main game level for the Pong game
@@ -30,15 +29,30 @@ class PongLevel(private val game: PongGame) : Screen {
         private const val BALL_RADIUS = 10f
         private const val BALL_INITIAL_SPEED = 400f
         
-        // Angle constants for ball direction
-        private const val MIN_ANGLE = MathUtils.PI / 6
-        private const val MAX_ANGLE = MathUtils.PI / 3
+        // Angle constants for ball direction (in radians)
+        // These ensure the ball doesn't move too vertically at the start
+        private const val MIN_ANGLE = MathUtils.PI / 6  // 30 degrees
+        private const val MAX_ANGLE = MathUtils.PI / 3  // 60 degrees
     }
 
     // Game objects
-    private val leftPaddle: Paddle
+    private val leftPaddle: Paddle = Paddle(SCREEN_WIDTH, SCREEN_HEIGHT, true)
     private val rightPaddle: Paddle
     private val ball: Ball
+    
+    // Initialize game objects in init block
+    init {
+        rightPaddle = Paddle(SCREEN_WIDTH, SCREEN_HEIGHT, false)
+        ball = Ball(
+            SCREEN_WIDTH,
+            SCREEN_HEIGHT,
+            initialRadius = BALL_RADIUS,
+            ballColor = Color.WHITE,
+            initialVelocityX = 0f,
+            initialVelocityY = 0f,
+            horizontalBoundsEnabled = false
+        )
+    }
     
     // Rendering tools
     private val camera: OrthographicCamera = OrthographicCamera()
@@ -57,8 +71,8 @@ class PongLevel(private val game: PongGame) : Screen {
     
     init {
         setupCamera()
-        createGameObjects()
         initializeFonts()
+        resetBall()
     }
     
     /**
@@ -69,34 +83,12 @@ class PongLevel(private val game: PongGame) : Screen {
     }
     
     /**
-     * Creates paddles and ball game objects
-     */
-    private fun createGameObjects() {
-        // Create paddles
-        leftPaddle = Paddle(SCREEN_WIDTH, SCREEN_HEIGHT, true)
-        rightPaddle = Paddle(SCREEN_WIDTH, SCREEN_HEIGHT, false)
-        
-        // Create the ball with a random direction
-        ball = Ball(
-            SCREEN_WIDTH, 
-            SCREEN_HEIGHT,
-            initialRadius = BALL_RADIUS,
-            initialColor = Color.WHITE,
-            initialVelocityX = 0f,  // Will be set in resetBall()
-            initialVelocityY = 0f,  // Will be set in resetBall()
-            colorChangeOnBounce = false,
-            horizontalBoundsEnabled = false  // We'll handle horizontal boundaries ourselves for scoring
-        )
-        resetBall()
-    }
-    
-    /**
      * Initializes fonts for score and instructions
      */
     private fun initializeFonts() {
         val generator = FreeTypeFontGenerator(Gdx.files.internal("fonts/roboto.ttf"))
         
-        // Score font (larger)
+        // Score font (larger-sized)
         scoreFont = generator.generateFont(FreeTypeFontGenerator.FreeTypeFontParameter().apply {
             size = SCORE_FONT_SIZE
             color = Color.WHITE
@@ -112,7 +104,7 @@ class PongLevel(private val game: PongGame) : Screen {
     }
     
     /**
-     * Resets the ball to center with random direction
+     * Resets the ball to the center with a random direction
      */
     private fun resetBall() {
         // Position ball in the center
@@ -142,7 +134,7 @@ class PongLevel(private val game: PongGame) : Screen {
     }
     
     /**
-     * Clears the screen with black background
+     * Clears the screen with a black background
      */
     private fun clearScreen() {
         Gdx.gl.glClearColor(0f, 0f, 0f, 1f)
@@ -158,14 +150,14 @@ class PongLevel(private val game: PongGame) : Screen {
             isPaused = !isPaused
         }
         
-        // Exit to main menu with escape key
+        // Exit to the main menu with the escape key
         if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.ESCAPE)) {
             game.initializeMenu()
         }
     }
     
     /**
-     * Updates all game objects if not paused
+     * Updates all the game objects if not paused
      */
     private fun updateGameState(delta: Float) {
         if (isPaused) return
@@ -181,7 +173,7 @@ class PongLevel(private val game: PongGame) : Screen {
     }
     
     /**
-     * Sets up rendering matrices
+     * Sets up the rendering matrices
      */
     private fun setupRenderingMatrices() {
         camera.update()
@@ -190,7 +182,7 @@ class PongLevel(private val game: PongGame) : Screen {
     }
     
     /**
-     * Renders all game objects (paddles, ball, center line)
+     * Renders all game objects (paddles, ball, and the center line)
      */
     private fun renderGameObjects() {
         // Render paddles and ball
@@ -239,7 +231,7 @@ class PongLevel(private val game: PongGame) : Screen {
     }
     
     /**
-     * Renders pause text when game is paused
+     * Renders pause text when the game is paused
      */
     private fun renderPauseTextIfNeeded() {
         if (isPaused) {
@@ -261,15 +253,15 @@ class PongLevel(private val game: PongGame) : Screen {
     }
     
     /**
-     * Checks for collision between ball and paddles
+     * Checks for collision between the ball and paddles
      */
     private fun checkPaddleCollision() {
-        // Check for collision with left paddle
+        // Check for collision with the left paddle
         if (ball.collidesWithRectangle(leftPaddle.bounds)) {
             ball.bounceOffPaddle(true, leftPaddle.bounds)
         }
         
-        // Check for collision with right paddle
+        // Check for collision with the right paddle
         if (ball.collidesWithRectangle(rightPaddle.bounds)) {
             ball.bounceOffPaddle(false, rightPaddle.bounds)
         }
@@ -279,13 +271,13 @@ class PongLevel(private val game: PongGame) : Screen {
      * Checks if a player has scored
      */
     private fun checkScoring() {
-        // Ball went past left edge - right scores
+        // The ball went past left-edge-right scores
         if (ball.getX() < 0) {
             rightScore++
             resetBall()
         }
         
-        // Ball went past right edge - left scores
+        // The ball went past right edge - left scores
         if (ball.getX() > SCREEN_WIDTH) {
             leftScore++
             resetBall()
@@ -301,7 +293,7 @@ class PongLevel(private val game: PongGame) : Screen {
     }
     
     override fun resume() {
-        // Keep paused until player explicitly unpauses
+        // Keep paused until the player explicitly unpauses
     }
     
     override fun hide() {

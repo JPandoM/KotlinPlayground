@@ -1,93 +1,75 @@
-# Kotlin Pong with LibGDX
 
-A modern implementation of the classic Pong game built with Kotlin and LibGDX. This project demonstrates how to create a game with LibGDX while leveraging Kotlin's concise syntax and powerful features.
+# Kotlin Pong Game
 
-## Overview
-
-This project showcases:
-- Integration between Kotlin and the LibGDX game development framework
-- A versatile bouncing ball with realistic physics simulation
-- Competitive two-player Pong gameplay with scoring system
-- Interactive menu system with multiple navigation options
-- Consistent visual design across all screens
-- Proper game architecture following LibGDX best practices
-- Clean code organization with proper separation of concerns
+A simple Pong game built using [LibGDX](https://libgdx.com/) and Kotlin. This project demonstrates the use of game development concepts such as physics, collision detection, animations, and UI rendering.
 
 ## Features
 
-- **Interactive Main Menu**:
-  - Keyboard navigation with arrow keys (UP/DOWN)
-  - Mouse/touch input support for direct selection
-  - Multiple menu options (Play Game, Settings, Exit)
-  - Dynamic bouncing ball animation in the background
-  - Animated title with floating letters and particle effects
-  - Looping background music for immersive experience
+- **Classic Pong Gameplay**: Two paddles and a bouncing ball.
+- **Main Menu**: Animated title, menu options, and particle effects.
+- **Game Mechanics**: Paddle movement, ball collision, and scoring.
+- **Pause and Resume**: Pause the game and resume at any time.
+- **Custom Fonts**: High-quality fonts using FreeType.
+- **Particle Effects**: Dynamic particle animations for visual enhancements.
 
-- **Classic Pong Gameplay**:
-  - Two-player paddling action (W/S for left paddle, UP/DOWN for right)
-  - Accurate ball physics with angle-based paddle bouncing
-  - Scoring system when balls pass paddles
-  - Center line divider for visual court separation
-  - Pause functionality with SPACE key or touch
-  - Return to menu with ESC key
+## Project Structure
 
-- **Visual Effects**:
-  - Particle system for dynamic visual enhancements
-  - Bouncing ball with optional dynamic color changes on collision
-  - Smooth animations and paddle movements
-  - High-quality font rendering with FreeType
-  - Multiple font sizes and styles for different UI elements
+- `App.kt`: Entry point for the application. Configures the game window and launches the game.
+- `PongGame.kt`: Main game class that manages screens.
+- `MainMenu.kt`: Implements the main menu screen with animations and particle effects.
+- `PongLevel.kt`: Core gameplay screen with paddles, ball, and scoring.
+- `Paddle.kt`: Represents the paddles controlled by players.
+- `Ball.kt`: Handles ball physics, movement, and collision detection.
+- `ParticleSystem.kt`: Manages particle effects for animations.
+- `build.gradle.kts`: Gradle build configuration for dependencies and application setup.
 
-- **Quality Implementation**:
-  - Proper screen management and transitions
-  - Resource handling with automatic cleanup
-  - Efficient rendering using LibGDX's graphics pipeline
-  - Configurable ball behavior for different contexts
-  - Modular code organization with clearly defined responsibilities
+## Prerequisites
 
-## Project Architecture
+- **JDK**: Ensure you have JDK 21 or higher installed.
+- **Gradle**: Gradle is required to build and run the project.
+- **LibGDX**: The project uses LibGDX libraries for game development.
 
-The project follows a modular architecture with clear separation of concerns:
+## Setup Instructions
 
-- **PongGame.kt**: Core game class that manages screen transitions
-- **MainMenu.kt**: Interactive menu screen with options and navigation
-- **PongLevel.kt**: Main game screen with paddles, ball, and scoring
-- **Ball.kt**: Versatile physics and rendering implementation for the ball
-- **Paddle.kt**: Paddle movement, rendering, and player controls
-- **ParticleSystem.kt**: Manages particle effects for visual enhancements
-- **App.kt**: Application entry point that configures and launches the game
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-repo/kotlin-pong.git
+   cd kotlin-pong
+   ```
 
-Each class is designed with:
-- Clear constants and companion objects for magic values
-- Small, single-responsibility methods
-- Consistent formatting and naming conventions
-- Comprehensive documentation for all public methods
+2. Open the project in your favorite IDE (e.g., IntelliJ IDEA).
+
+3. Build the project using Gradle:
+   ```bash
+   ./gradlew build
+   ```
+
+4. Run the game:
+   ```bash
+   ./gradlew run
+   ```
 
 ## Controls
 
-- **Main Menu**:
-  - UP/DOWN: Navigate menu options
-  - ENTER: Select highlighted option
-  - Mouse/Touch: Click directly on menu options
+### Main Menu
+- **Arrow Keys**: Navigate menu options.
+- **Enter**: Select a menu option.
 
-- **Game Level**:
-  - W/S: Move left paddle up/down
-  - UP/DOWN: Move right paddle up/down
-  - SPACE: Pause/unpause game
-  - ESC: Return to main menu
+### Gameplay
+- **W/S**: Move the left paddle up/down.
+- **Arrow Keys (Up/Down)**: Move the right paddle up/down.
+- **Space**: Pause/Resume the game.
+- **Escape**: Return to the main menu.
 
-## Requirements
+## Dependencies
 
-- JDK 21 or higher
-- Gradle (included via wrapper)
-- LibGDX dependencies (managed through Gradle)
+The project uses the following dependencies:
+- `com.badlogicgames.gdx:gdx:1.13.1`: Core LibGDX library.
+- `com.badlogicgames.gdx:gdx-backend-lwjgl3:1.13.1`: LWJGL3 backend for desktop.
+- `com.badlogicgames.gdx:gdx-platform:1.13.1:natives-desktop`: Native platform bindings.
+- `com.badlogicgames.gdx:gdx-freetype:1.13.1`: FreeType extension for fonts.
 
-## Asset Files
+## Fonts and Assets
 
-The game expects the following asset files to be present:
-- `fonts/roboto.ttf` - Font file for all text rendering
-- `audio/menu_theme.wav` - Looping background music for the main menu
-
-## Building and Running
-
-This project uses Gradle for build automation. You can run it with the following commands:
+- **Fonts**: The game uses the `Roboto` font located in `assets/fonts/roboto.ttf`.
+- **Audio**: Background music for the main menu is located in `assets/audio/menu_theme.wav`.
