@@ -15,11 +15,4 @@ class PongGame : Game() {
         setScreen(MainMenu(this))
     }
 
-    /**
-     * Clean up resources when the game is closed
-     */
-    override fun dispose() {
-        // The screen's dispose method will be called automatically
-        super.dispose()
-    }
 }

@@ -9,123 +9,311 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator
-import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter
+import kotlin.math.sin
+import kotlin.random.Random
 
 /**
  * Main menu screen for the Pong game
  */
 class MainMenu(private val game: PongGame) : Screen {
 
-    // Screen dimensions
-    private val screenWidth = 800f
-    private val screenHeight = 600f
+    // Constants
+    companion object {
+        private const val SCREEN_WIDTH = 800f
+        private const val SCREEN_HEIGHT = 600f
+        private const val MENU_START_Y = 300f
+        private const val MENU_ITEM_SPACING = 50f
+        private const val TITLE_FONT_SIZE = 60
+        private const val MENU_FONT_SIZE = 30
+        private const val INSTRUCTION_FONT_SIZE = 15
+        private const val TITLE_BASE_Y = SCREEN_HEIGHT - 170
+        private const val PARTICLE_EMISSION_RATE = 0.02f
+        private const val INSTRUCTION_Y = 50f
+        private const val LETTER_SPACING = 40f
+        
+        // Animation constants
+        private const val TITLE_AMPLITUDE = 20f
+        private const val TITLE_FREQUENCY = 2f * Math.PI.toFloat() / 3.0f
+        private const val MENU_AMPLITUDE = 8f
+        private const val MENU_FREQUENCY = 2f * Math.PI.toFloat() / 3.0f
+    }
 
     // UI components
-    private val camera: OrthographicCamera = OrthographicCamera()
-    private val batch: SpriteBatch = SpriteBatch()
-    private var font: BitmapFont
-    private var titleFont: BitmapFont
-    private var instructionFont: BitmapFont
+    private val camera = OrthographicCamera()
+    private val batch = SpriteBatch()
     private val glyphLayout = GlyphLayout()
+    private val ball = Ball(SCREEN_WIDTH, SCREEN_HEIGHT)
+    private val shapeRenderer = ShapeRenderer()
+    
+    // Fonts
+    private lateinit var font: BitmapFont
+    private lateinit var titleFont: BitmapFont
+    private lateinit var instructionFont: BitmapFont
 
     // Menu options
     private val menuItems = listOf("Play Game", "Settings", "Exit")
     private var selectedItem = 0
 
-    // Menu positioning
-    private val menuStartY = 300f
-    private val menuItemSpacing = 50f
-
     // Touch/mouse position
     private val touchPoint = Vector3()
     
-    // Shape renderer for drawing the ball
-    private val shapeRenderer = ShapeRenderer()
+    // Background music
+    private lateinit var menuMusic: com.badlogic.gdx.audio.Music
     
-    // Bouncing ball
-    private val ball = Ball(screenWidth, screenHeight)
+    // Animation timing
+    private var totalTime: Float = 0f
+    
+    // Particle system for letter effects
+    private val particleSystem = ParticleSystem(emissionRate = PARTICLE_EMISSION_RATE)
+    private val random = Random.Default
 
+    // Font dimensions for positioning
+    private val titleFontHeight = TITLE_FONT_SIZE * 0.75f  // Approximate height of capital letters
+    
+    // Title details
+    private val titleLetters = arrayOf("P", "O", "N", "G")
+    
     init {
         // Set up the camera to match our screen dimensions
-        camera.setToOrtho(false, screenWidth, screenHeight)
+        camera.setToOrtho(false, SCREEN_WIDTH, SCREEN_HEIGHT)
         
-        // Configure fonts using FreeType for high-quality rendering
+        // Initialize fonts
+        initializeFonts()
+    }
+    
+    /**
+     * Initializes all the fonts used in the menu
+     */
+    private fun initializeFonts() {
         val generator = FreeTypeFontGenerator(Gdx.files.internal("fonts/roboto.ttf"))
-        val parameter = FreeTypeFontParameter()
         
         // Title font - large size for the title
-        parameter.size = 45
-        parameter.color = Color.WHITE
-        titleFont = generator.generateFont(parameter)
+        titleFont = generator.generateFont(FreeTypeFontParameter().apply {
+            size = TITLE_FONT_SIZE
+            color = Color.WHITE
+            borderWidth = 2f
+            borderColor = Color.WHITE
+            shadowOffsetX = 3
+            shadowOffsetY = 3
+            shadowColor = Color(0.3f, 0.3f, 0.3f, 0.5f)
+            borderStraight = true
+            spaceX = 300 // Add spacing between characters
+        })
         
         // Menu font - medium size for menu items
-        parameter.size = 30
-        font = generator.generateFont(parameter)
-        
+        font = generator.generateFont(FreeTypeFontParameter().apply {
+            size = MENU_FONT_SIZE
+            color = Color.WHITE
+        })
+
         // Instruction font - small size for instructions
-        parameter.size = 15
-        parameter.color = Color.LIGHT_GRAY
-        instructionFont = generator.generateFont(parameter)
-        
+        instructionFont = generator.generateFont(FreeTypeFontParameter().apply {
+            size = INSTRUCTION_FONT_SIZE
+            color = Color.LIGHT_GRAY
+        })
+
         // Dispose of the generator after creating fonts
         generator.dispose()
     }
 
     override fun show() {
+        loadAndPlayBackgroundMusic()
     }
-
+    
+    /**
+     * Loads and starts playing the background music
+     */
+    private fun loadAndPlayBackgroundMusic() {
+        menuMusic = Gdx.audio.newMusic(Gdx.files.internal("audio/menu_theme.wav"))
+        menuMusic.isLooping = true
+        menuMusic.volume = 0.7f
+        menuMusic.play()
+    }
+    
     override fun render(delta: Float) {
-        // Clear the screen with a dark blue color
+        updateState(delta)
+        clearScreen()
+        setupRendering()
+        renderGameElements(delta)
+        handleInput()
+        renderMenuUI()
+    }
+    
+    /**
+     * Updates animation time and particle system
+     */
+    private fun updateState(delta: Float) {
+        totalTime += delta
+        particleSystem.update(delta)
+    }
+    
+    /**
+     * Clears the screen with black background
+     */
+    private fun clearScreen() {
         Gdx.gl.glClearColor(0f, 0f, 0f, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
-        
-        // Update camera
+    }
+    
+    /**
+     * Sets up camera and projection matrices
+     */
+    private fun setupRendering() {
         camera.update()
         batch.projectionMatrix = camera.combined
         shapeRenderer.projectionMatrix = camera.combined
-        
-        // Update and render the bouncing ball (before drawing menu)
+    }
+    
+    /**
+     * Renders ball and particle effects
+     */
+    private fun renderGameElements(delta: Float) {
+        // Update and render the bouncing ball
         ball.update(delta)
         ball.render(shapeRenderer)
         
-        // Handle input
-        handleInput()
-        
-        // Draw menu
+        // Render particles
+        particleSystem.render(shapeRenderer)
+    }
+    
+    /**
+     * Renders the menu title, options and instructions
+     */
+    private fun renderMenuUI() {
         batch.begin()
+        renderAnimatedTitle()
+        renderMenuItems()
+        renderInstructions()
+        batch.end()
+    }
+    
+    /**
+     * Renders the animated "PONG" title with particles
+     */
+    private fun renderAnimatedTitle() {
+        // Calculate widths of each letter for proper centering
+        val letterWidths = calculateLetterWidths()
+        val totalTitleWidth = calculateTotalTitleWidth(letterWidths)
         
-        // Draw title
-        glyphLayout.setText(titleFont, "PONG")
-        titleFont.draw(batch, "PONG",
-            (screenWidth - glyphLayout.width) / 2,
-            screenHeight - 100)
+        // Calculate starting X position to center the entire title
+        var currentX = (SCREEN_WIDTH - totalTitleWidth) / 2
         
-        // Draw menu items
+        // Draw each letter with its own animation
+        for (i in titleLetters.indices) {
+            currentX = drawAnimatedLetter(i, currentX, letterWidths[i])
+        }
+        
+        // Reset emission timer if needed
+        if (particleSystem.canEmit()) {
+            particleSystem.resetEmissionTimer()
+        }
+    }
+    
+    /**
+     * Calculates the width of each letter in the title
+     */
+    private fun calculateLetterWidths(): FloatArray {
+        val letterWidths = FloatArray(titleLetters.size)
+        for (i in titleLetters.indices) {
+            glyphLayout.setText(titleFont, titleLetters[i])
+            letterWidths[i] = glyphLayout.width
+        }
+        return letterWidths
+    }
+    
+    /**
+     * Calculates the total width of the title including letter spacing
+     */
+    private fun calculateTotalTitleWidth(letterWidths: FloatArray): Float {
+        // Sum of all letter widths
+        val lettersWidth = letterWidths.sum()
+        
+        // Add spacing between letters to total width
+        val spacingWidth = LETTER_SPACING * (titleLetters.size - 1)
+        return lettersWidth + spacingWidth
+    }
+    
+    /**
+     * Draws a single animated letter of the title and handles particle emission
+     * @return The X position after this letter (for the next letter)
+     */
+    private fun drawAnimatedLetter(index: Int, xPosition: Float, letterWidth: Float): Float {
+        // Calculate animation offset
+        val phaseOffset = index * 0.5f // Half a radian offset per letter
+        val letterOffset = TITLE_AMPLITUDE * sin(totalTime * TITLE_FREQUENCY + phaseOffset)
+        
+        // Draw the letter with animation
+        titleFont.draw(batch, titleLetters[index], xPosition, TITLE_BASE_Y + letterOffset)
+        
+        // Emit particles from the bottom of the letter
+        emitParticlesForLetter(index, xPosition, letterWidth, letterOffset)
+        
+        // Return position for the next letter
+        return xPosition + letterWidth + LETTER_SPACING
+    }
+    
+    /**
+     * Emits particles from the bottom of a letter
+     */
+    private fun emitParticlesForLetter(index: Int, xPosition: Float, letterWidth: Float, letterOffset: Float) {
+        if (particleSystem.canEmit()) {
+            // Create a different number of particles based on letter width
+            val particleCount = random.nextInt(3, 6)
+            
+            // For a capital letter, the baseline is at the bottom,
+            // but we need to position particles at the very bottom of the visual character
+            val letterBottomOffsetY = -titleFontHeight
+            
+            // Emit particles across the bottom of the letter
+            repeat(particleCount) {
+                // Randomize position across the letter width (but not at the very edges)
+                val offsetX = letterWidth * (0.1f + random.nextFloat() * 0.8f) // 10-90% of width
+                val emissionX = xPosition + offsetX
+                
+                // Position at the true bottom of the letter
+                val emissionY = TITLE_BASE_Y + letterOffset + letterBottomOffsetY
+                
+                // Emit a single particle at this position
+                particleSystem.emit(emissionX, emissionY, 1)
+            }
+        }
+    }
+    
+    /**
+     * Renders the menu items with animation and selection highlighting
+     */
+    private fun renderMenuItems() {
         for (i in menuItems.indices) {
             // Set color based on selection
-            if (i == selectedItem) {
-                font.color = Color.YELLOW
-            } else {
-                font.color = Color.WHITE
-            }
+            font.color = if (i == selectedItem) Color.YELLOW else Color.WHITE
             
             // Calculate position
             glyphLayout.setText(font, menuItems[i])
-            val x = (screenWidth - glyphLayout.width) / 2
-            val y = menuStartY - (i * menuItemSpacing)
+            val x = (SCREEN_WIDTH - glyphLayout.width) / 2
+            
+            // Add floating effect with phase offset
+            val phaseOffset = i * 0.5f 
+            val menuFloatOffset = MENU_AMPLITUDE * sin(totalTime * MENU_FREQUENCY + phaseOffset)
+            
+            // Calculate final Y position
+            val y = MENU_START_Y - (i * MENU_ITEM_SPACING) + menuFloatOffset
             
             // Draw menu item
             font.draw(batch, menuItems[i], x, y)
         }
-        
-        // Draw instructions with a dedicated instruction font
-        glyphLayout.setText(instructionFont, "Use UP/DOWN arrows to navigate, ENTER to select")
-        instructionFont.draw(batch, "Use UP/DOWN arrows to navigate, ENTER to select",
-            (screenWidth - glyphLayout.width) / 2,
-            50f)
-        
-        batch.end()
+    }
+    
+    /**
+     * Renders the instructions text
+     */
+    private fun renderInstructions() {
+        val instructionsText = "Use UP/DOWN arrows to navigate, ENTER to select"
+        glyphLayout.setText(instructionFont, instructionsText)
+        instructionFont.draw(batch, instructionsText,
+            (SCREEN_WIDTH - glyphLayout.width) / 2,
+            INSTRUCTION_Y)
     }
 
     override fun resize(width: Int, height: Int) {
@@ -142,75 +330,137 @@ class MainMenu(private val game: PongGame) : Screen {
 
     override fun hide() {
         // Called when this screen is no longer the current screen
+        menuMusic.stop()
     }
 
     override fun dispose() {
-        // Cleanup resources (batch, fonts, shapeRenderer)
+        disposeResources()
+    }
+    
+    /**
+     * Cleans up all resources used by the menu
+     */
+    private fun disposeResources() {
         batch.dispose()
         font.dispose()
         titleFont.dispose()
         instructionFont.dispose()
         shapeRenderer.dispose()
+        menuMusic.dispose()
+        particleSystem.clear()
     }
-
+    
+    /**
+     * Handles all user input for menu navigation
+     */
     private fun handleInput() {
-        // Keyboard controls for menu navigation
+        handleKeyboardInput()
+        handleTouchInput()
+    }
+    
+    /**
+     * Handles keyboard navigation and selection
+     */
+    private fun handleKeyboardInput() {
+        // Up/Down for navigation
         if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
-            // Move selection up, wrapping around if at the top
-            selectedItem = (selectedItem - 1 + menuItems.size) % menuItems.size
+            moveSelectionUp()
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+            moveSelectionDown()
         }
         
-        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
-            // Move selection down, wrapping around if at the bottom
-            selectedItem = (selectedItem + 1) % menuItems.size
-        }
-        
-        // Handle selection with an Enter key
+        // Enter for selection
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             selectMenuItem(selectedItem)
         }
-        
-        // Mouse/touch controls
+    }
+    
+    /**
+     * Moves selection up with wrapping
+     */
+    private fun moveSelectionUp() {
+        selectedItem = (selectedItem - 1 + menuItems.size) % menuItems.size
+    }
+    
+    /**
+     * Moves selection down with wrapping
+     */
+    private fun moveSelectionDown() {
+        selectedItem = (selectedItem + 1) % menuItems.size
+    }
+    
+    /**
+     * Handles touch/mouse input for menu navigation
+     */
+    private fun handleTouchInput() {
         if (Gdx.input.justTouched()) {
             // Convert touch coordinates to camera coordinates
             touchPoint.set(Gdx.input.x.toFloat(), Gdx.input.y.toFloat(), 0f)
             camera.unproject(touchPoint)
             
-            // Check each menu item
-            for (i in menuItems.indices) {
-                // Calculate position and bounds
-                glyphLayout.setText(font, menuItems[i])
-                val x = (screenWidth - glyphLayout.width) / 2
-                val y = menuStartY - (i * menuItemSpacing)
-                val rect = com.badlogic.gdx.math.Rectangle(
-                    x, y - glyphLayout.height,
-                    glyphLayout.width, glyphLayout.height
-                )
-                
-                // If touched, select this item
-                if (rect.contains(touchPoint.x, touchPoint.y)) {
-                    selectMenuItem(i)
-                    break
-                }
+            checkMenuItemsTouched()
+        }
+    }
+    
+    /**
+     * Checks if any menu item was touched
+     */
+    private fun checkMenuItemsTouched() {
+        for (i in menuItems.indices) {
+            if (isMenuItemTouched(i)) {
+                selectMenuItem(i)
+                break
             }
         }
     }
-
+    
+    /**
+     * Determines if a specific menu item was touched
+     */
+    private fun isMenuItemTouched(index: Int): Boolean {
+        // Calculate position and bounds
+        glyphLayout.setText(font, menuItems[index])
+        val x = (SCREEN_WIDTH - glyphLayout.width) / 2
+        val y = MENU_START_Y - (index * MENU_ITEM_SPACING)
+        
+        val rect = com.badlogic.gdx.math.Rectangle(
+            x, y - glyphLayout.height,
+            glyphLayout.width, glyphLayout.height
+        )
+        
+        return rect.contains(touchPoint.x, touchPoint.y)
+    }
+    
+    /**
+     * Handles menu item selection and performs the appropriate action
+     */
     private fun selectMenuItem(index: Int) {
         when (menuItems[index]) {
-            "Play Game" -> {
-                // Launch the Pong game level
-                game.setScreen(PongLevel(game))
-            }
-            "Settings" -> {
-                // This would load the settings screen
-                println("Opening settings...")
-                // Eventually: game.setScreen(SettingsScreen(game))
-            }
-            "Exit" -> {
-                // Exit the game
-                Gdx.app.exit()
-            }
+            "Play Game" -> startGame()
+            "Settings" -> openSettings()
+            "Exit" -> exitGame()
         }
+    }
+    
+    /**
+     * Starts the game by switching to the game screen
+     */
+    private fun startGame() {
+        game.setScreen(PongLevel(game))
+    }
+    
+    /**
+     * Opens the settings screen (currently just logs a message)
+     */
+    private fun openSettings() {
+        println("Opening settings...")
+        // Eventually: game.setScreen(SettingsScreen(game))
+    }
+    
+    /**
+     * Exits the application
+     */
+    private fun exitGame() {
+        Gdx.app.exit()
     }
 }

@@ -8,23 +8,37 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
-import com.badlogic.gdx.math.Circle
 import com.badlogic.gdx.math.MathUtils
-import com.badlogic.gdx.math.Rectangle
 import kotlin.math.abs
 
 /**
  * The main game level for the Pong game
  */
 class PongLevel(private val game: PongGame) : Screen {
-    // Screen dimensions
-    private val screenWidth = 800f
-    private val screenHeight = 600f
+    // Constants
+    companion object {
+        private const val SCREEN_WIDTH = 800f
+        private const val SCREEN_HEIGHT = 600f
+        
+        private const val SCORE_FONT_SIZE = 36
+        private const val INSTRUCTION_FONT_SIZE = 16
+        
+        private const val SCORE_Y_POSITION = SCREEN_HEIGHT - 50
+        private const val SCORE_X_OFFSET = 50f
+        private const val INSTRUCTION_Y_POSITION = 30f
+        
+        private const val BALL_RADIUS = 10f
+        private const val BALL_INITIAL_SPEED = 400f
+        
+        // Angle constants for ball direction
+        private const val MIN_ANGLE = MathUtils.PI / 6
+        private const val MAX_ANGLE = MathUtils.PI / 3
+    }
 
     // Game objects
     private val leftPaddle: Paddle
     private val rightPaddle: Paddle
-    private val ball: PongBall
+    private val ball: Ball
     
     // Rendering tools
     private val camera: OrthographicCamera = OrthographicCamera()
@@ -34,43 +48,83 @@ class PongLevel(private val game: PongGame) : Screen {
     // Scoring
     private var leftScore = 0
     private var rightScore = 0
-    private var scoreFont: BitmapFont
+    private lateinit var scoreFont: BitmapFont
+    private lateinit var instructionFont: BitmapFont
     private val glyphLayout = GlyphLayout()
     
     // Game state
     private var isPaused = false
     
     init {
-        // Set up the camera
-        camera.setToOrtho(false, screenWidth, screenHeight)
-        
+        setupCamera()
+        createGameObjects()
+        initializeFonts()
+    }
+    
+    /**
+     * Sets up the orthographic camera
+     */
+    private fun setupCamera() {
+        camera.setToOrtho(false, SCREEN_WIDTH, SCREEN_HEIGHT)
+    }
+    
+    /**
+     * Creates paddles and ball game objects
+     */
+    private fun createGameObjects() {
         // Create paddles
-        leftPaddle = Paddle(screenWidth, screenHeight, true)
-        rightPaddle = Paddle(screenWidth, screenHeight, false)
+        leftPaddle = Paddle(SCREEN_WIDTH, SCREEN_HEIGHT, true)
+        rightPaddle = Paddle(SCREEN_WIDTH, SCREEN_HEIGHT, false)
         
         // Create the ball with a random direction
-        ball = PongBall(screenWidth, screenHeight)
+        ball = Ball(
+            SCREEN_WIDTH, 
+            SCREEN_HEIGHT,
+            initialRadius = BALL_RADIUS,
+            initialColor = Color.WHITE,
+            initialVelocityX = 0f,  // Will be set in resetBall()
+            initialVelocityY = 0f,  // Will be set in resetBall()
+            colorChangeOnBounce = false,
+            horizontalBoundsEnabled = false  // We'll handle horizontal boundaries ourselves for scoring
+        )
         resetBall()
-        
-        // Set up score font
+    }
+    
+    /**
+     * Initializes fonts for score and instructions
+     */
+    private fun initializeFonts() {
         val generator = FreeTypeFontGenerator(Gdx.files.internal("fonts/roboto.ttf"))
-        val parameter = FreeTypeFontGenerator.FreeTypeFontParameter()
-        parameter.size = 36
-        parameter.color = Color.WHITE
-        scoreFont = generator.generateFont(parameter)
+        
+        // Score font (larger)
+        scoreFont = generator.generateFont(FreeTypeFontGenerator.FreeTypeFontParameter().apply {
+            size = SCORE_FONT_SIZE
+            color = Color.WHITE
+        })
+        
+        // Instruction font (smaller)
+        instructionFont = generator.generateFont(FreeTypeFontGenerator.FreeTypeFontParameter().apply {
+            size = INSTRUCTION_FONT_SIZE
+            color = Color.LIGHT_GRAY
+        })
+        
         generator.dispose()
     }
     
+    /**
+     * Resets the ball to center with random direction
+     */
     private fun resetBall() {
         // Position ball in the center
         ball.reset()
         
         // Give it a random direction, but ensure it's not too vertical
-        val angle = MathUtils.random(MathUtils.PI / 6, MathUtils.PI / 3)
+        val angle = MathUtils.random(MIN_ANGLE, MAX_ANGLE)
         val direction = if (MathUtils.randomBoolean()) angle else MathUtils.PI - angle
+        
         ball.setVelocity(
-            MathUtils.cos(direction) * 400f,
-            MathUtils.sin(direction) * 400f
+            MathUtils.cos(direction) * BALL_INITIAL_SPEED,
+            MathUtils.sin(direction) * BALL_INITIAL_SPEED
         )
     }
     
@@ -79,11 +133,27 @@ class PongLevel(private val game: PongGame) : Screen {
     }
     
     override fun render(delta: Float) {
-        // Clear the screen
-        Gdx.gl.glClearColor(0f, 0f, 0.2f, 1f)
+        clearScreen()
+        handleInput()
+        updateGameState(delta)
+        setupRenderingMatrices()
+        renderGameObjects()
+        renderUI()
+    }
+    
+    /**
+     * Clears the screen with black background
+     */
+    private fun clearScreen() {
+        Gdx.gl.glClearColor(0f, 0f, 0f, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
-        
-        // Handle input for pause
+    }
+    
+    /**
+     * Handles user input for pause and exit
+     */
+    private fun handleInput() {
+        // Toggle pause with space or touch
         if (Gdx.input.justTouched() || Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.SPACE)) {
             isPaused = !isPaused
         }
@@ -91,91 +161,132 @@ class PongLevel(private val game: PongGame) : Screen {
         // Exit to main menu with escape key
         if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.ESCAPE)) {
             game.initializeMenu()
-            return
         }
+    }
+    
+    /**
+     * Updates all game objects if not paused
+     */
+    private fun updateGameState(delta: Float) {
+        if (isPaused) return
         
-        if (!isPaused) {
-            // Update game objects
-            leftPaddle.update(delta)
-            rightPaddle.update(delta)
-            
-            // Update ball and check for collisions
-            ball.update(delta)
-            checkPaddleCollision()
-            
-            // Check for scoring
-            checkScoring()
-        }
+        // Update game objects
+        leftPaddle.update(delta)
+        rightPaddle.update(delta)
+        ball.update(delta)
         
-        // Set the projection matrix for rendering
+        // Check for collisions and scoring
+        checkPaddleCollision()
+        checkScoring()
+    }
+    
+    /**
+     * Sets up rendering matrices
+     */
+    private fun setupRenderingMatrices() {
         camera.update()
         batch.projectionMatrix = camera.combined
         shapeRenderer.projectionMatrix = camera.combined
-        
-        // Render game objects
+    }
+    
+    /**
+     * Renders all game objects (paddles, ball, center line)
+     */
+    private fun renderGameObjects() {
+        // Render paddles and ball
         leftPaddle.render(shapeRenderer)
         rightPaddle.render(shapeRenderer)
         ball.render(shapeRenderer)
         
         // Draw the center line
+        renderCenterLine()
+    }
+    
+    /**
+     * Renders the center line divider
+     */
+    private fun renderCenterLine() {
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
         shapeRenderer.color = Color.WHITE
-        shapeRenderer.line(screenWidth / 2, 0f, screenWidth / 2, screenHeight)
+        shapeRenderer.line(SCREEN_WIDTH / 2, 0f, SCREEN_WIDTH / 2, SCREEN_HEIGHT)
         shapeRenderer.end()
-        
-        // Draw scores
+    }
+    
+    /**
+     * Renders score, pause text, and instructions
+     */
+    private fun renderUI() {
         batch.begin()
-        
+        renderScores()
+        renderPauseTextIfNeeded()
+        renderInstructions()
+        batch.end()
+    }
+    
+    /**
+     * Renders player scores
+     */
+    private fun renderScores() {
         // Left score
         glyphLayout.setText(scoreFont, leftScore.toString())
         scoreFont.draw(batch, leftScore.toString(), 
-            (screenWidth / 2) - glyphLayout.width - 50, screenHeight - 50)
+            (SCREEN_WIDTH / 2) - glyphLayout.width - SCORE_X_OFFSET, SCORE_Y_POSITION)
         
         // Right score
         glyphLayout.setText(scoreFont, rightScore.toString())
         scoreFont.draw(batch, rightScore.toString(), 
-            (screenWidth / 2) + 50, screenHeight - 50)
-        
-        // Pause text
+            (SCREEN_WIDTH / 2) + SCORE_X_OFFSET, SCORE_Y_POSITION)
+    }
+    
+    /**
+     * Renders pause text when game is paused
+     */
+    private fun renderPauseTextIfNeeded() {
         if (isPaused) {
             val pauseText = "PAUSED - Tap or press SPACE to continue"
             glyphLayout.setText(scoreFont, pauseText)
             scoreFont.draw(batch, pauseText, 
-                (screenWidth - glyphLayout.width) / 2, screenHeight / 2)
+                (SCREEN_WIDTH - glyphLayout.width) / 2, SCREEN_HEIGHT / 2)
         }
-        
-        // Instructions
-        val instructionsText = "W/S - Left Paddle | UP/DOWN - Right Paddle | ESC - Main Menu"
-        glyphLayout.setText(scoreFont, instructionsText)
-        scoreFont.draw(batch, instructionsText, 
-            (screenWidth - glyphLayout.width) / 2, 30f)
-            
-        batch.end()
     }
     
+    /**
+     * Renders control instructions
+     */
+    private fun renderInstructions() {
+        val instructionsText = "W/S - Left Paddle | UP/DOWN - Right Paddle | ESC - Main Menu"
+        glyphLayout.setText(instructionFont, instructionsText)
+        instructionFont.draw(batch, instructionsText, 
+            (SCREEN_WIDTH - glyphLayout.width) / 2, INSTRUCTION_Y_POSITION)
+    }
+    
+    /**
+     * Checks for collision between ball and paddles
+     */
     private fun checkPaddleCollision() {
         // Check for collision with left paddle
         if (ball.collidesWithRectangle(leftPaddle.bounds)) {
-            // Ball hit left paddle - calculate bounce based on where it hit
             ball.bounceOffPaddle(true, leftPaddle.bounds)
         }
         
         // Check for collision with right paddle
         if (ball.collidesWithRectangle(rightPaddle.bounds)) {
-            // Ball hit right paddle - calculate bounce based on where it hit
             ball.bounceOffPaddle(false, rightPaddle.bounds)
         }
     }
     
+    /**
+     * Checks if a player has scored
+     */
     private fun checkScoring() {
-        // Ball went past left paddle - right scores
+        // Ball went past left edge - right scores
         if (ball.getX() < 0) {
             rightScore++
             resetBall()
         }
         
-        // Ball went past right paddle - left scores
-        if (ball.getX() > screenWidth) {
+        // Ball went past right edge - left scores
+        if (ball.getX() > SCREEN_WIDTH) {
             leftScore++
             resetBall()
         }
@@ -198,134 +309,16 @@ class PongLevel(private val game: PongGame) : Screen {
     }
     
     override fun dispose() {
-        // Dispose of all resources
+        disposeResources()
+    }
+    
+    /**
+     * Disposes all resources used by this screen
+     */
+    private fun disposeResources() {
         batch.dispose()
         shapeRenderer.dispose()
         scoreFont.dispose()
+        instructionFont.dispose()
     }
 }
-
-/**
- * Ball class specifically for Pong (extends the existing Ball with Pong-specific functionality)
- */
-class PongBall(
-    private val screenWidth: Float,
-    private val screenHeight: Float
-) {
-    // Ball properties
-    private val radius = 10f
-    private var posX = screenWidth / 2
-    private var posY = screenHeight / 2
-    private var velocityX = 300f
-    private var velocityY = 200f
-    private val color = Color.WHITE
-    
-    // Collision bounds
-    val bounds = Circle(posX, posY, radius)
-    
-    /**
-     * Updates the ball's position and handles top/bottom bouncing
-     */
-    fun update(delta: Float) {
-        // Update position based on velocity
-        posX += velocityX * delta
-        posY += velocityY * delta
-        
-        // Check vertical bounds and handle bouncing
-        if (posY - radius < 0) {
-            posY = radius
-            velocityY = abs(velocityY)
-        } else if (posY + radius > screenHeight) {
-            posY = screenHeight - radius
-            velocityY = -abs(velocityY)
-        }
-        
-        // Update collision circle
-        bounds.setPosition(posX, posY)
-    }
-    
-    /**
-     * Renders the ball
-     */
-    fun render(shapeRenderer: ShapeRenderer) {
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        shapeRenderer.color = color
-        shapeRenderer.circle(posX, posY, radius)
-        shapeRenderer.end()
-    }
-    
-    /**
-     * Resets the ball to the center of the screen
-     */
-    fun reset() {
-        posX = screenWidth / 2
-        posY = screenHeight / 2
-        bounds.setPosition(posX, posY)
-    }
-    
-    /**
-     * Sets the ball's velocity
-     */
-    fun setVelocity(x: Float, y: Float) {
-        velocityX = x
-        velocityY = y
-    }
-    
-    /**
-     * Handles the ball bouncing off a paddle
-     */
-    fun bounceOffPaddle(isLeftPaddle: Boolean, paddleBounds: Rectangle) {
-        // Calculate relative position where ball hit the paddle (0 = middle, -1 = top, 1 = bottom)
-        val relativeIntersectY = (paddleBounds.y + (paddleBounds.height / 2)) - posY
-        val normalizedRelativeIntersectionY = (relativeIntersectY / (paddleBounds.height / 2))
-        
-        // Calculate bounce angle (between -60 and 60 degrees)
-        val bounceAngle = normalizedRelativeIntersectionY * (Math.PI / 3) // Pi/3 = 60 degrees
-        
-        // Calculate new velocity based on bounce angle
-        val speed = Math.sqrt((velocityX * velocityX + velocityY * velocityY).toDouble()).toFloat() * 1.05f
-        val direction = if (isLeftPaddle) 0f else MathUtils.PI.toFloat()
-        
-        velocityX = speed * MathUtils.cos(direction + bounceAngle.toFloat())
-        velocityY = -speed * MathUtils.sin(bounceAngle.toFloat())
-        
-        // Ensure X velocity has the right direction and minimum speed
-        val minXSpeed = 200f
-        if (isLeftPaddle) {
-            velocityX = maxOf(minXSpeed, abs(velocityX))
-        } else {
-            velocityX = minOf(-minXSpeed, -abs(velocityX))
-        }
-        
-        // Ensure ball doesn't get stuck in paddle
-        if (isLeftPaddle) {
-            posX = paddleBounds.x + paddleBounds.width + radius + 1
-        } else {
-            posX = paddleBounds.x - radius - 1
-        }
-        
-        // Update the bounds position
-        bounds.setPosition(posX, posY)
-    }
-    
-    /**
-     * Gets the X position of the ball
-     */
-    fun getX(): Float = posX
-    
-    /**
-     * Checks if the ball collides with a rectangle (used for paddle collision)
-     */
-    fun collidesWithRectangle(rect: Rectangle): Boolean {
-        // Find the closest point on the rectangle to the center of the circle
-        val closestX = maxOf(rect.x, minOf(posX, rect.x + rect.width))
-        val closestY = maxOf(rect.y, minOf(posY, rect.y + rect.height))
-        
-        // Calculate the distance between the circle's center and the closest point
-        val distanceX = posX - closestX
-        val distanceY = posY - closestY
-        
-        // If the distance is less than the circle's radius, they intersect
-        return (distanceX * distanceX + distanceY * distanceY) < (radius * radius)
-    }
-    }
