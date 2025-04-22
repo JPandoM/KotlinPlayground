@@ -199,10 +199,8 @@ class MainMenu(private val game: PongGame) : Screen {
     private fun selectMenuItem(index: Int) {
         when (menuItems[index]) {
             "Play Game" -> {
-                // This would load the game screen
-                // For now, we'll just print a message
-                println("Starting game...")
-                // Eventually: game.setScreen(GameScreen(game))
+                // Launch the Pong game level
+                game.setScreen(PongLevel(game))
             }
             "Settings" -> {
                 // This would load the settings screen
